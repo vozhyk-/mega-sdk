@@ -710,7 +710,7 @@ bool Sync::movetolocaldebris(string* localpath, LocalNode* lnode)
         {
             // Removes local node from state cache
             if( lnode ) {
-                cachenode( lnode );
+                cachenode( lnode, true );
             }
             localdebris.resize(t);
             return true;
