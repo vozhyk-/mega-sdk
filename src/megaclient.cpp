@@ -323,12 +323,12 @@ Node* MegaClient::childnodebyname(Node* p, const char* name)
 
 void MegaClient::init()
 {
-    warned = false;
-    csretrying = false;
-    fetchingnodes = false;
-    chunkfailed = false;
-
-    noinetds = 0;
+    warned          = false;
+    csretrying      = false;
+    fetchingnodes   = false;
+    chunkfailed     = false;
+    noinetds        = 0;
+    current_email   = "";
 
     if (syncscanstate)
     {
@@ -1611,6 +1611,7 @@ void MegaClient::disconnect()
     {
         it->second->req.disconnect();
     }
+
 }
 
 void MegaClient::logout()
@@ -1829,6 +1830,7 @@ void MegaClient::initsc()
 
         finalizesc(complete);
     }
+
 }
 
 // erase and and fill user's local state cache
@@ -1906,6 +1908,7 @@ void MegaClient::finalizesc(bool complete)
         delete sctable;
         sctable = NULL;
     }
+
 }
 
 // notify the application of the request failure and remove records no longer needed
@@ -4368,6 +4371,8 @@ sessiontype_t MegaClient::loggedin()
     {
         return EPHEMERALACCOUNT;
     }
+
+    current_email = u->email;
 
     if (!asymkey.isvalid())
     {

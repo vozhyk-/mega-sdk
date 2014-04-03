@@ -36,6 +36,9 @@ public:
     // current state
     syncstate_t state;
 
+    // Caches a node. If isDeletion, removes node from cached nodes
+    void cachenode( LocalNode* lnode, const bool& isDeletion = false );
+
     // change state, signal to application
     void changestate(syncstate_t);
 
@@ -74,11 +77,18 @@ public:
     // permanent lock on the debris/tmp folder
     FileAccess* tmpfa;
 
+    // state cache table
+    DbTable* statecachetable;
+
     // move file or folder to localdebris
-    bool movetolocaldebris(string* localpath);
+    bool movetolocaldebris(string* localpath, LocalNode* lnode = NULL );
 
     Sync(MegaClient*, string*, const char*, string*, Node*, int = 0);
     ~Sync();
+
+protected :
+    bool loadFromCache();
+
 };
 } // namespace
 
