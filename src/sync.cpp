@@ -566,7 +566,7 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                     changestate(SYNC_FAILED);           // root node cannot be
                                                         // a file
                 }
-                else if( l->size != fa->size || l->mtime != fa->mtime )
+                else 
                 {
                     if (l->size > 0)
                     {
