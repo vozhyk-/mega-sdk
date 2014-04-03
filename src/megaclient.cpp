@@ -975,6 +975,10 @@ void MegaClient::exec()
                                 {
                                     sync->changestate(SYNC_ACTIVE);
                                 }
+                                else if( sync->state == SYNC_ACTIVE )
+                                {
+                                    sync->cachenodes();
+                                }
 
                                 if (!syncfslockretry && sync->dirnotify->notifyq[DirNotify::RETRY].size())
                                 {
@@ -986,6 +990,7 @@ void MegaClient::exec()
                                     totalpending += sync->dirnotify->notifyq[DirNotify::DIREVENTS].size();
                                 }
                             }
+
                         }
                     }
                 }
@@ -1892,6 +1897,7 @@ void MegaClient::updatesc()
 
         finalizesc(complete);
     }
+
 }
 
 // commit or purge local state cache
@@ -5242,6 +5248,7 @@ void MegaClient::syncupdate()
     }
 
     synccreate.clear();
+
 }
 
 void MegaClient::putnodes_sync_result(error e, NewNode* nn)

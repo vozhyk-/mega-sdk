@@ -36,8 +36,8 @@ public:
     // current state
     syncstate_t state;
 
-    // Caches a node. If isDeletion, removes node from cached nodes
-    void cachenode( LocalNode* lnode, const bool& isDeletion = false );
+    // Caches all synchronized LocalNode
+    void cachenodes();
 
     // change state, signal to application
     void changestate(syncstate_t);

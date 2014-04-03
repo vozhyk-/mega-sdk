@@ -846,9 +846,6 @@ void LocalNode::treestate(treestate_t newts)
     {
         sync->client->app->syncupdate_treestate(this);
         dts = ts;
-        if( TREESTATE_SYNCED == dts ) {
-            sync->cachenode( this );
-        }
     }
 
     if (parent)
@@ -871,6 +868,7 @@ void LocalNode::treestate(treestate_t newts)
 
         parent->treestate();
     }
+
 }
 
 void LocalNode::setnode(Node* cnode)

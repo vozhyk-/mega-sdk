@@ -143,16 +143,19 @@ bool Sync::loadFromCache() {
     return false;
 }
 
-void Sync::cachenode( LocalNode* lnode, const bool& isDeletion ) {
-    if( statecachetable && lnode ) {
+void Sync::cachenodes() {
+    if( statecachetable ) {
+        statecachetable->truncate();
+        statecachetable->begin();
 
-        if( isDeletion && lnode->dbid ) {
-            statecachetable->del( lnode->dbid );
-            lnode->dbid = 0;
-        } else if( !isDeletion ) {
-            statecachetable->put( MegaClient::CACHEDLOCALNODE, lnode, &client->key );
+        for( handlelocalnode_map::iterator it = client->fsidnode.begin(); it != client->fsidnode.end(); ++it ) {
+            LocalNode* cur = it->second;
+            if( cur && cur->sync == this && cur->ts == TREESTATE_SYNCED ) {
+                statecachetable->put( MegaClient::CACHEDLOCALNODE, cur, &client->key );
+            }
         }
 
+        statecachetable->commit();
     }
 }
 
@@ -400,16 +403,23 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
     {
         // Tries to load local nodes from cache
         if( SYNC_INITIALSCAN == state ) {
-            LocalNode* tmpL = NULL;
+            LocalNode* tmpL = l;
             try {
-                tmpL = client->fsidnode.at(fa->fsid);
-                l    = tmpL;
-                if( fa->size == l->size && fa->mtime == l->mtime ) {
+                l    = client->fsidnode.at(fa->fsid);
+                if( l
+                        && ( FILENODE == l->type || FOLDERNODE == l->type )
+                        && fa->localname == l->name
+                        && fa->size == l->size
+                        && fa->mtime == l->mtime
+                ) {
                     localbytes += l->size;
                     delete fa;
                     return l;
                 }
+
             } catch( exception& ) { /* not found */ }
+            // restores LocalNode to previous state
+            l = tmpL;
         }
 
         if (!isroot)
@@ -439,9 +449,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                             {
                                 client->app->syncupdate_local_move(this, it->second->name.c_str(), path.c_str());
 
-                                // Deletes old entry from state cache
-                                cachenode( l , true );
-
                                 // immediately delete existing LocalNode and
                                 // replace with moved one
                                 delete l;
@@ -452,9 +459,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
 
                                 // unmark possible deletion
                                 it->second->setnotseen(0);
-
-                                // Add moved file to state cache
-                                cachenode( it->second );
 
                                 delete fa;
                                 return it->second;
@@ -488,9 +492,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                         l->deleted = false;
 
                         client->syncactivity = true;
-
-                        // Updates state cache entry
-                        cachenode( l );
 
                         delete fa;
                         return l;
@@ -628,11 +629,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
 
     delete fa;
 
-    // Adds changed/new nodes in the cache table
-//    if( l && ( changed || newnode ) ) {
-//        cachenode(l);
-//    }
-
     return l;
 }
 
@@ -708,10 +704,6 @@ bool Sync::movetolocaldebris(string* localpath, LocalNode* lnode)
 
         if (client->fsaccess->renamelocal(localpath, &localdebris, false))
         {
-            // Removes local node from state cache
-            if( lnode ) {
-                cachenode( lnode, true );
-            }
             localdebris.resize(t);
             return true;
         }
