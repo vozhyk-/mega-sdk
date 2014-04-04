@@ -150,7 +150,7 @@ void Sync::cachenodes() {
 
         for( handlelocalnode_map::iterator it = client->fsidnode.begin(); it != client->fsidnode.end(); ++it ) {
             LocalNode* cur = it->second;
-            if( cur && cur->sync == this && cur->ts == TREESTATE_SYNCED ) {
+            if( cur && cur->sync == this ) {
                 statecachetable->put( MegaClient::CACHEDLOCALNODE, cur, &client->key );
             }
         }
