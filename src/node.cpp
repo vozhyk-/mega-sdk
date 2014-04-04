@@ -1239,9 +1239,9 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     uName = ptr;
     ptr += uNameLength;
 
-    localNameStr = string( uLocalName, uLocalNameLength );
-    gFingerPrint = string( uSerializedFingerprint, uFingerPrintLength );
-    nameStr      = string( uName, uNameLength );
+    localNameStr = string( uLocalName );
+    gFingerPrint = string( uSerializedFingerprint );
+    nameStr      = string( uName );
 
     lnode = new LocalNode();
     lnode->init( sync, uType, parent, NULL, &localNameStr );

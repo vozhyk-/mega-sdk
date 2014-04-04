@@ -396,8 +396,9 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
         client->fsaccess->local2path(&tmppath, &path);
     }
 
+    string fname = (localname ? *localname : newname);
     // attempt to open/type this file
-    fa = client->fsaccess->newfileaccess();
+    fa           = client->fsaccess->newfileaccess();
 
     if (fa->fopen(localname ? localpath : &tmppath, true, false))
     {
@@ -408,9 +409,9 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                 l    = client->fsidnode.at(fa->fsid);
                 if( l
                         && ( FILENODE == l->type || FOLDERNODE == l->type )
-                        && fa->localname == l->name
                         && fa->size == l->size
                         && fa->mtime == l->mtime
+                        && fname == l->name
                 ) {
                     localbytes += l->size;
                     delete fa;
