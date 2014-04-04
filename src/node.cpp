@@ -1102,6 +1102,9 @@ bool LocalNode::serialize( string* sr ) {
 
     m_off_t sType = type ? -type : size;
     m_off_t sSize = size;
+    m_off_t sTs   = ts;
+    m_off_t sDts  = dts;
+
     handle dummynode = 0;
     string sFingerPrint;
 
@@ -1112,8 +1115,8 @@ bool LocalNode::serialize( string* sr ) {
     sr->append( (char*)&sType,  sizeof(sType) );
     sr->append( (char*)&sSize,  sizeof(sSize) );     // serializefingerprint does not serializes size
     sr->append( (char*)&fsid,   sizeof(handle) );
-    sr->append( (char*)&ts,     sizeof(ts) );
-    sr->append( (char*)&dts,    sizeof(dts) );
+    sr->append( (char*)&sTs,     sizeof(sTs) );
+    sr->append( (char*)&sDts,    sizeof(sDts) );
 
     if( node ) {
         sr->append( (char*)&node->nodehandle, sizeof(handle) );
@@ -1151,16 +1154,20 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     const char* end     = ptr + sData->size();
 
     m_off_t usType,
-            uSize
+            uSize,
+            usTs,
+            usDts
     ;
     nodetype_t  uType;
     handle      uFsid,
                 uParentFsid,
                 uNodeId
     ;
+
     treestate_t uTs,
                 uDts
     ;
+
     const char* uLocalName;
     const char* uSerializedFingerprint;
     const char* uName;
@@ -1173,7 +1180,7 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     unsigned int    uNameLength;
 
     // +3 => at least 1 byte for fingerprint, name and localName
-    if( ptr + ( 2 * sizeof(m_off_t) + ( 3 * sizeof(handle) ) + (2 * sizeof(treestate_t)) + sizeof(unsigned short) + 2 * sizeof(unsigned int) + 3 ) > end )  {
+    if( ptr + ( 4 * sizeof(m_off_t) + ( 3 * sizeof(handle) ) + sizeof(unsigned short) + 2 * sizeof(unsigned int) + 3 ) > end )  {
         return NULL;
     }
 
@@ -1192,13 +1199,13 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     memcpy( (char*)&uFsid, ptr, sizeof(handle) );
     ptr += sizeof(handle);
 
-    uTs = TREESTATE_NONE;
-    memcpy( (char*)&uTs, ptr, sizeof(treestate_t) );
-    ptr += sizeof(treestate_t);
+    usTs = MemAccess::get<m_off_t>(ptr);
+    ptr += sizeof(usTs);
+    uTs = ( usTs < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usTs );
 
-    uDts = TREESTATE_NONE;
-    memcpy( (char*)&uDts, ptr, sizeof(treestate_t) );
-    ptr += sizeof(treestate_t);
+    usDts = MemAccess::get<m_off_t>(ptr);
+    ptr += sizeof(usDts);
+    uDts = ( usDts < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usDts );
 
     uNodeId = 0;
     memcpy( (char*)&uNodeId, ptr, sizeof(handle) );
