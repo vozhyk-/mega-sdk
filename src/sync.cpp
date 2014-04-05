@@ -141,6 +141,11 @@ bool Sync::loadFromCache() {
             }
         }
 
+        // First sync, no dbid for localroot
+        if( localroot.dbid <= 0 ) {
+            addToInsertQueue( &localroot );
+        }
+
         return true;
     }
 
@@ -162,7 +167,7 @@ void Sync::addToInsertQueue( LocalNode* toInsert ) {
 }
 
 void Sync::cachenodes() {
-    if( statecachetable ) {
+    if( statecachetable && ( deleteq.size() || insertq.size() ) ) {
 
         statecachetable->begin();
 

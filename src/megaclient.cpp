@@ -975,10 +975,6 @@ void MegaClient::exec()
                                 {
                                     sync->changestate(SYNC_ACTIVE);
                                 }
-                                else if( sync->state == SYNC_ACTIVE )
-                                {
-                                    sync->cachenodes();
-                                }
 
                                 if (!syncfslockretry && sync->dirnotify->notifyq[DirNotify::RETRY].size())
                                 {
@@ -990,6 +986,7 @@ void MegaClient::exec()
                                     totalpending += sync->dirnotify->notifyq[DirNotify::DIREVENTS].size();
                                 }
                             }
+
 
                         }
                     }
@@ -1017,6 +1014,7 @@ void MegaClient::exec()
                                 success = false;
                             }
                         }
+
                     }
 
                     if (!success)
@@ -1101,19 +1099,20 @@ void MegaClient::exec()
                 {
                     for (localnode_set::iterator it = localsyncnotseen.begin(); it != localsyncnotseen.end();)
                     {
-                        if ((*it)->notseen > 1)
+                        LocalNode* nsNode = *it;
+                        if ( nsNode->notseen > 1 )
                         {
                             // missed for 2 rounds: delete remotely
-                            if ((*it)->type == FOLDERNODE)
+                            if ( nsNode->type == FOLDERNODE)
                             {
-                                app->syncupdate_local_folder_deletion((*it)->sync, (*it)->name.c_str());
+                                app->syncupdate_local_folder_deletion(nsNode->sync, nsNode->name.c_str());
                             }
                             else
                             {
-                                app->syncupdate_local_file_deletion((*it)->sync, (*it)->name.c_str());
+                                app->syncupdate_local_file_deletion(nsNode->sync, nsNode->name.c_str());
                             }
 
-                            delete *it;
+                            delete nsNode;
                             syncops = true;
 
                             // loop back from the beginning, as the deletion
@@ -4954,6 +4953,8 @@ bool MegaClient::syncdown(LocalNode* l, string* localpath, bool rubbish)
         }
     }
 
+    l->sync->cachenodes();
+
     return success;
 }
 
@@ -5128,6 +5129,8 @@ void MegaClient::syncup(LocalNode* l, dstime* nds)
     {
         l->treestate(TREESTATE_SYNCED);
     }
+
+    l->sync->cachenodes();
 }
 
 // execute updates stored in synccreate[]
