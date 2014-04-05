@@ -441,13 +441,24 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                 tmpL = localroot.childbyname( &fname );
             }
 
-            if( tmpL
-                && ( FILENODE == tmpL->type || FOLDERNODE == tmpL->type )
-                && fa->size == tmpL->size
-                && fa->mtime == tmpL->mtime
+            if( tmpL && (
+                            FOLDERNODE == tmpL->type
+                            || ( FILENODE == tmpL->type
+                                && fa->size == tmpL->size
+                                && fa->mtime == tmpL->mtime
+                            )
+                        )
             ) {
                 l = tmpL;
                 localbytes += l->size;
+                l->setnotseen(0);
+                l->scanseqno = scanseqno;
+
+                if( l->type == FOLDERNODE ) {
+                    scan(localname ? localpath : &tmppath, fa);
+                    client->app->syncupdate_local_folder_addition(this, path.c_str());
+                }
+
                 delete fa;
                 return l;
             }
