@@ -4953,8 +4953,6 @@ bool MegaClient::syncdown(LocalNode* l, string* localpath, bool rubbish)
         }
     }
 
-    l->sync->cachenodes();
-
     return success;
 }
 
@@ -5130,7 +5128,6 @@ void MegaClient::syncup(LocalNode* l, dstime* nds)
         l->treestate(TREESTATE_SYNCED);
     }
 
-    l->sync->cachenodes();
 }
 
 // execute updates stored in synccreate[]

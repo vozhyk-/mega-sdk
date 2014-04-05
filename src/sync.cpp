@@ -130,20 +130,15 @@ bool Sync::loadFromCache() {
         // Restores parent relationship between nodes
         for( map<int32_t, LocalNode*>::iterator it = tempMap.begin(); it != tempMap.end(); ++it ) {
             LocalNode* cur = it->second;
-            if( cur->parent_dbid != 0 && cur->parent_dbid != localroot.dbid ) {
+            if( cur->parent_dbid != 0  ) {
                 map<int32_t, LocalNode*>::iterator pit = tempMap.find(cur->parent_dbid);
                 if( pit != tempMap.end() ) {
                     LocalNode* pNode = pit->second;
                     cur->setnameparent( pNode, NULL );
                 }
-            } else if( cur->parent_dbid != 0 ) {
+            } else {
                 cur->setnameparent( &localroot, NULL );
             }
-        }
-
-        // First sync, no dbid for localroot
-        if( localroot.dbid <= 0 ) {
-            addToInsertQueue( &localroot );
         }
 
         return true;
@@ -422,24 +417,23 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
         client->fsaccess->local2path(&tmppath, &path);
     }
 
-    string fname;
-
-    if( localname ) {
-        fname = *localname;
-    } else if ( "" != newname ) {
-        fname = newname;
-    } else if( localpath ) {
-        fname.append( *localpath, client->fsaccess->lastpartlocal(localpath) + 1, string::npos);
-    }
-
     // attempt to open/type this file
-    fa           = client->fsaccess->newfileaccess();
+    fa = client->fsaccess->newfileaccess();
 
     if (fa->fopen(localname ? localpath : &tmppath, true, false))
     {
         // Tries to load local nodes from cache
         if( SYNC_INITIALSCAN == state ) {
             LocalNode* tmpL = NULL;
+            string fname;
+
+            if( localname ) {
+                fname = *localname;
+            } else if ( "" != newname ) {
+                fname = newname;
+            } else if( localpath ) {
+                fname.append( *localpath, client->fsaccess->lastpartlocal(localpath) + 1, string::npos);
+            }
 
             if( parent ) {
                 tmpL = parent->childbyname( &fname );
@@ -707,11 +701,10 @@ void Sync::procscanq(int q)
     }
     else if (!dirnotify->notifyq[!q].size())
     {
+        if( SYNC_ACTIVE == state ) {
+            cachenodes();
+        }
         scanseqno++;    // all queues empty: new scan sweep begins
-    }
-
-    if( SYNC_ACTIVE == state ) {
-        cachenodes();
     }
 
 }
