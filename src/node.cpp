@@ -1098,10 +1098,15 @@ bool LocalNode::serialize( string* sr ) {
 
     handle dummynode = 0;
     string sFingerPrint;
+    string fullpath;
 
     unsigned short sFingerPrintLength;
-    unsigned int   localNameLength;
-    unsigned int   nameLength;
+    unsigned int    localNameLength,
+                    nameLength,
+                    fullpathLength
+    ;
+
+    getlocalpath( &fullpath );
 
     sr->append( (char*)&sType,  sizeof(sType) );
     sr->append( (char*)&sSize,  sizeof(sSize) );     // serializefingerprint does not serializes size
@@ -1129,6 +1134,10 @@ bool LocalNode::serialize( string* sr ) {
     sr->append( (char*)&nameLength, sizeof(nameLength) );
     sr->append( name.c_str(), nameLength );
 
+    fullpathLength = fullpath.size() + 1;
+    sr->append( (char*)&fullpathLength, sizeof(fullpathLength) );
+    sr->append( fullpath.c_str(), fullpathLength );
+
     return true;
 }
 
@@ -1146,21 +1155,27 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     handle      uFsid,
                 uNodeId
     ;
+    unsigned short  uFingerPrintLength;
 
     const char* uLocalName;
     const char* uSerializedFingerprint;
     const char* uName;
+    const char* uFullPath;
 
-    string          localNameStr;
-    string          gFingerPrint;
-    string          nameStr;
-    unsigned short  uFingerPrintLength;
-    unsigned int    uLocalNameLength;
-    unsigned int    uNameLength;
+    string  localNameStr,
+            gFingerPrint,
+            nameStr,
+            fullPathStr
+    ;
 
-    // +3 => at least 1 byte for fingerprint, name and localName
+    unsigned int    uLocalNameLength,
+                    uNameLength,
+                    uFullPathLength
+    ;
+
+    // +4 => at least 1 byte for fingerprint, name, fullpath and localName
     if( ptr + ( 2 * sizeof(m_off_t) + sizeof(int32_t) + ( 2 * sizeof(handle) )
-                + sizeof(unsigned short) + 2 * sizeof(unsigned int) + 3 ) > end )  {
+                + sizeof(unsigned short) + 3 * sizeof(unsigned int) + 4 ) > end )  {
         return NULL;
     }
 
@@ -1210,14 +1225,21 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     uName = ptr;
     ptr += uNameLength;
 
+    uFullPathLength = MemAccess::get<unsigned int>(ptr);
+    ptr += sizeof(uFullPathLength);
+    if( ptr + uFullPathLength > end ) {
+        return NULL;
+    }
+    uFullPath = ptr;
+    ptr += uFullPathLength;
+
+    fullPathStr  = string( uFullPath );
     localNameStr = string( uLocalName );
     gFingerPrint = string( uSerializedFingerprint );
     nameStr      = string( uName );
 
     lnode = new LocalNode();
-    lnode->init( sync, uType, parent, NULL, &localNameStr );
-    lnode->setfsid( uFsid );
-    lnode->parent_dbid  = uPdbid;
+    lnode->init( sync, uType, parent, NULL, &fullPathStr );
 
     // Restores node if existing
     if( uNodeId ) {
@@ -1226,6 +1248,9 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
             lnode->setnode(nnode);
         }
     }
+
+    lnode->setfsid( uFsid );
+    lnode->parent_dbid  = uPdbid;
 
     if( uNameLength > 1 ) {
         lnode->name = nameStr;

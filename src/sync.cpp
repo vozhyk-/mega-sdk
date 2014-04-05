@@ -70,9 +70,9 @@ Sync::Sync(MegaClient* cclient, string* crootpath, const char* cdebris,
     client->fsaccess->name2local( &dbname );
     statecachetable = client->dbaccess->open( client->fsaccess, &dbname );
 
-    loadFromCache();
-
     sync_it = client->syncs.insert(client->syncs.end(), this);
+
+    loadFromCache();
 }
 
 Sync::~Sync()
@@ -451,13 +451,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
             ) {
                 l = tmpL;
                 localbytes += l->size;
-                l->setnotseen(0);
-                l->scanseqno = scanseqno;
-
-                if( l->type == FOLDERNODE ) {
-                    scan(localname ? localpath : &tmppath, fa);
-                    client->app->syncupdate_local_folder_addition(this, path.c_str());
-                }
 
                 delete fa;
                 return l;
