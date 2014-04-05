@@ -36,6 +36,18 @@ public:
     // current state
     syncstate_t state;
 
+    // deletion queue
+    list<int32_t> deleteq;
+
+    // insertion/update queue
+    list<LocalNode*> insertq;
+
+    // Adds an entry to the delete queue - removes it from insertq
+    void addToDeleteQueue( LocalNode* toDelete );
+
+    // Adds an entry to the insert queue - removes it from deleteq
+    void addToInsertQueue( LocalNode* toInsert );
+
     // Caches all synchronized LocalNode
     void cachenodes();
 

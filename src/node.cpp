@@ -694,7 +694,6 @@ bool Node::isbelow(Node* p) const
 void LocalNode::setnameparent(LocalNode* newparent, string* newlocalpath)
 {
     bool newnode = !localname.size();
-    parent_fsid  = 0;
 
     if (parent)
     {
@@ -773,9 +772,6 @@ void LocalNode::setnameparent(LocalNode* newparent, string* newlocalpath)
         parent->treestate();
     }
 
-    if( parent ) {
-        parent_fsid = parent->fsid;
-    }
 }
 
 // delay uploads by 1.1 s to prevent server flooding while a file is still
@@ -795,7 +791,7 @@ void LocalNode::init(Sync* csync, nodetype_t ctype, LocalNode* cparent, string* 
     deleted     = false;
     syncxfer    = true;
     newnode     = NULL;
-    parent_fsid = 0;
+    parent_dbid = 0;
 
     ts = TREESTATE_NONE;
     dts = TREESTATE_NONE;
@@ -827,16 +823,14 @@ void LocalNode::init(Sync* csync, nodetype_t ctype, LocalNode* cparent, string* 
 
     sync->client->syncactivity = true;
 
-    if( parent ) {
-        parent_fsid = parent->fsid;
-    }
-
     sync->localnodes[type]++;
 }
 
 // update treestates back to the root LocalNode, inform app about changes
 void LocalNode::treestate(treestate_t newts)
 {
+    bool statechanged = false;
+
     if (newts != TREESTATE_NONE)
     {
         ts = newts;
@@ -846,6 +840,7 @@ void LocalNode::treestate(treestate_t newts)
     {
         sync->client->app->syncupdate_treestate(this);
         dts = ts;
+        statechanged = true;
     }
 
     if (parent)
@@ -936,15 +931,12 @@ void LocalNode::setfsid(handle newfsid)
         fsid_it->second = this;
     }
 
-    // Update children parent_fsid
-    for( localnode_map::iterator it = children.begin(); it != children.end(); ++it ) {
-        LocalNode* child = it->second;
-        child->parent_fsid = fsid;
-    }
 }
 
 LocalNode::~LocalNode()
 {
+
+    sync->addToDeleteQueue( this );
     setnotseen(0);
 
     if (newnode)
@@ -1102,8 +1094,7 @@ bool LocalNode::serialize( string* sr ) {
 
     m_off_t sType = type ? -type : size;
     m_off_t sSize = size;
-    m_off_t sTs   = ts;
-    m_off_t sDts  = dts;
+    int32_t pdbid = ( parent ? parent->dbid : 0 );
 
     handle dummynode = 0;
     string sFingerPrint;
@@ -1115,8 +1106,6 @@ bool LocalNode::serialize( string* sr ) {
     sr->append( (char*)&sType,  sizeof(sType) );
     sr->append( (char*)&sSize,  sizeof(sSize) );     // serializefingerprint does not serializes size
     sr->append( (char*)&fsid,   sizeof(handle) );
-    sr->append( (char*)&sTs,     sizeof(sTs) );
-    sr->append( (char*)&sDts,    sizeof(sDts) );
 
     if( node ) {
         sr->append( (char*)&node->nodehandle, sizeof(handle) );
@@ -1125,11 +1114,7 @@ bool LocalNode::serialize( string* sr ) {
     }
 
     // Used to restore LocalNode tree
-    if( parent ) {
-        sr->append( (char*)&parent->fsid, sizeof(handle));
-    } else {
-        sr->append( (char*)&parent_fsid, sizeof(handle) );
-    }
+    sr->append( (char*)&pdbid, sizeof(int32_t) );
 
     serializefingerprint( &sFingerPrint );
     sFingerPrintLength = sFingerPrint.size() + 1;
@@ -1154,18 +1139,12 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     const char* end     = ptr + sData->size();
 
     m_off_t usType,
-            uSize,
-            usTs,
-            usDts
+            uSize
     ;
+    int32_t     uPdbid;
     nodetype_t  uType;
     handle      uFsid,
-                uParentFsid,
                 uNodeId
-    ;
-
-    treestate_t uTs,
-                uDts
     ;
 
     const char* uLocalName;
@@ -1180,7 +1159,8 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     unsigned int    uNameLength;
 
     // +3 => at least 1 byte for fingerprint, name and localName
-    if( ptr + ( 4 * sizeof(m_off_t) + ( 3 * sizeof(handle) ) + sizeof(unsigned short) + 2 * sizeof(unsigned int) + 3 ) > end )  {
+    if( ptr + ( 2 * sizeof(m_off_t) + sizeof(int32_t) + ( 2 * sizeof(handle) )
+                + sizeof(unsigned short) + 2 * sizeof(unsigned int) + 3 ) > end )  {
         return NULL;
     }
 
@@ -1199,21 +1179,12 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     memcpy( (char*)&uFsid, ptr, sizeof(handle) );
     ptr += sizeof(handle);
 
-    usTs = MemAccess::get<m_off_t>(ptr);
-    ptr += sizeof(usTs);
-    uTs = ( usTs < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usTs );
-
-    usDts = MemAccess::get<m_off_t>(ptr);
-    ptr += sizeof(usDts);
-    uDts = ( usDts < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usDts );
-
     uNodeId = 0;
     memcpy( (char*)&uNodeId, ptr, sizeof(handle) );
     ptr += sizeof(handle);
 
-    uParentFsid = 0;
-    memcpy( (char*)&uParentFsid, ptr, sizeof(handle) );
-    ptr += sizeof(handle);
+    uPdbid = MemAccess::get<int32_t>(ptr);
+    ptr   += sizeof(int32_t);
 
     uFingerPrintLength = MemAccess::get<unsigned short>(ptr);
     ptr += sizeof(uFingerPrintLength);
@@ -1246,11 +1217,7 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     lnode = new LocalNode();
     lnode->init( sync, uType, parent, NULL, &localNameStr );
     lnode->setfsid( uFsid );
-    if( NULL == parent  && uParentFsid != uFsid ) {
-        lnode->parent_fsid = uParentFsid;
-    }
-    lnode->ts   = uTs;
-    lnode->dts  = uDts;
+    lnode->parent_dbid  = uPdbid;
 
     // Restores node if existing
     if( uNodeId ) {

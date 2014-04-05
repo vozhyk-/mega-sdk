@@ -106,53 +106,78 @@ bool Sync::loadFromCache() {
 
         statecachetable->rewind();
         string cachedata;
-        map<handle, LocalNode*> tempMap;
+        map<int32_t, LocalNode*> tempMap;
         uint32_t cid;
 
         // Loads all cached nodes
         while( statecachetable->next( &cid, &cachedata, &client->key ) ) {
             LocalNode* cur = LocalNode::unserialize(this, &cachedata);
             if( cur ) {
-                cur->dbid = cid;
-                tempMap[cur->fsid] = cur;
+                cur->dbid           = cid;
+                tempMap[cur->dbid]  = cur;
+            }
+        }
+
+        // Tries to restore localroot dbid
+        for( map<int32_t, LocalNode*>::iterator it = tempMap.begin(); it != tempMap.end(); ++it ) {
+            LocalNode* cur = it->second;
+            if( 0 == cur->parent_dbid && cur->localname == localroot.localname ) {
+                localroot.dbid = cur->dbid;
+                break;
             }
         }
 
         // Restores parent relationship between nodes
-        for( map<handle, LocalNode*>::iterator it = tempMap.begin(); it != tempMap.end(); ++it ) {
+        for( map<int32_t, LocalNode*>::iterator it = tempMap.begin(); it != tempMap.end(); ++it ) {
             LocalNode* cur = it->second;
-
-            if( cur->parent_fsid != 0 ) {
-                if( cur->parent_fsid == localroot.fsid ) {
-                    cur->setnameparent( &localroot, NULL );
-                } else {
-                    try {
-                        LocalNode* pNode = tempMap.at(cur->parent_fsid);
-                        cur->setnameparent( pNode, NULL );
-                    } catch( exception& ) {
-                    }
+            if( cur->parent_dbid != 0 && cur->parent_dbid != localroot.dbid ) {
+                map<int32_t, LocalNode*>::iterator pit = tempMap.find(cur->parent_dbid);
+                if( pit != tempMap.end() ) {
+                    LocalNode* pNode = pit->second;
+                    cur->setnameparent( pNode, NULL );
                 }
+            } else if( cur->parent_dbid != 0 ) {
+                cur->setnameparent( &localroot, NULL );
             }
-
         }
 
         return true;
-
     }
 
     return false;
 }
 
+void Sync::addToDeleteQueue( LocalNode* toDelete ) {
+    insertq.remove( toDelete );
+    if( toDelete->dbid ) {
+        deleteq.push_back(toDelete->dbid);
+    }
+}
+
+void Sync::addToInsertQueue( LocalNode* toInsert ) {
+    if( toInsert->dbid ) {
+        deleteq.remove( toInsert->dbid );
+    }
+    insertq.push_back(toInsert);
+}
+
 void Sync::cachenodes() {
     if( statecachetable ) {
-        statecachetable->truncate();
+
         statecachetable->begin();
 
-        for( handlelocalnode_map::iterator it = client->fsidnode.begin(); it != client->fsidnode.end(); ++it ) {
-            LocalNode* cur = it->second;
-            if( cur && cur->sync == this ) {
-                statecachetable->put( MegaClient::CACHEDLOCALNODE, cur, &client->key );
-            }
+        // Process delete queue
+        while( deleteq.size() ) {
+            int32_t dbid = deleteq.front();
+            statecachetable->del(dbid);
+            deleteq.pop_front();
+        }
+
+        // Process insert queue
+        while( insertq.size() ) {
+            LocalNode* cur = insertq.front();
+            statecachetable->put( MegaClient::CACHEDLOCALNODE, cur, &client->key );
+            insertq.pop_front();
         }
 
         statecachetable->commit();
@@ -166,10 +191,6 @@ void Sync::changestate(syncstate_t newstate)
         client->app->syncupdate_state(this, newstate);
 
         state = newstate;
-
-        if( SYNC_INITIALSCAN == state ) {
-            loadFromCache();
-        }
     }
 }
 
@@ -404,23 +425,24 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
     {
         // Tries to load local nodes from cache
         if( SYNC_INITIALSCAN == state ) {
-            LocalNode* tmpL = l;
-            try {
-                l    = client->fsidnode.at(fa->fsid);
-                if( l
-                        && ( FILENODE == l->type || FOLDERNODE == l->type )
-                        && fa->size == l->size
-                        && fa->mtime == l->mtime
-                        && fname == l->name
-                ) {
-                    localbytes += l->size;
-                    delete fa;
-                    return l;
-                }
+            LocalNode* tmpL = NULL;
 
-            } catch( exception& ) { /* not found */ }
-            // restores LocalNode to previous state
-            l = tmpL;
+            if( parent ) {
+                tmpL = parent->childbyname( &fname );
+            } else {
+                tmpL = localroot.childbyname( &fname );
+            }
+
+            if( tmpL
+                && ( FILENODE == tmpL->type || FOLDERNODE == tmpL->type )
+                && fa->size == tmpL->size
+                && fa->mtime == tmpL->mtime
+            ) {
+                l = tmpL;
+                localbytes += l->size;
+                delete fa;
+                return l;
+            }
         }
 
         if (!isroot)
@@ -461,6 +483,8 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                                 // unmark possible deletion
                                 it->second->setnotseen(0);
 
+                                addToInsertQueue( it->second );
+
                                 delete fa;
                                 return it->second;
                             }
@@ -493,6 +517,8 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                         l->deleted = false;
 
                         client->syncactivity = true;
+
+                        addToInsertQueue( l );
 
                         delete fa;
                         return l;
@@ -527,6 +553,8 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                     // filenames
                     client->updateputs();
 
+                    addToInsertQueue( it->second );
+
                     // unmark possible deletion
                     it->second->setnotseen(0);
                 }
@@ -555,6 +583,7 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                 {
                     scan(localname ? localpath : &tmppath, fa);
                     client->app->syncupdate_local_folder_addition(this, path.c_str());
+                    addToInsertQueue( l );
                 }
                 else
                 {
@@ -590,10 +619,12 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                     if (newnode)
                     {
                         client->app->syncupdate_local_file_addition(this, path.c_str());
+                        addToInsertQueue( l );
                     }
                     else if (changed)
                     {
                         client->app->syncupdate_local_file_change(this, path.c_str());
+                        addToInsertQueue( l );
                     }
 
                 }
@@ -663,6 +694,10 @@ void Sync::procscanq(int q)
     else if (!dirnotify->notifyq[!q].size())
     {
         scanseqno++;    // all queues empty: new scan sweep begins
+    }
+
+    if( SYNC_ACTIVE == state ) {
+        cachenodes();
     }
 
 }

@@ -188,8 +188,9 @@ struct MEGA_API LocalNode : public File, Cachable
 
     // parent linkage
     LocalNode* parent;
-    // stored to rebuild tree after serialization => this must not be a pointer to parent->fsid
-    handle parent_fsid;
+
+    // stored to rebuild tree after serialization => this must not be a pointer to parent->dbid
+    int32_t parent_dbid;
 
     // children by name
     localnode_map children;
