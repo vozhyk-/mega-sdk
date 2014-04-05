@@ -422,7 +422,16 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
         client->fsaccess->local2path(&tmppath, &path);
     }
 
-    string fname = (localname ? *localname : newname);
+    string fname;
+
+    if( localname ) {
+        fname = *localname;
+    } else if ( "" != newname ) {
+        fname = newname;
+    } else if( localpath ) {
+        fname.append( *localpath, client->fsaccess->lastpartlocal(localpath) + 1, string::npos);
+    }
+
     // attempt to open/type this file
     fa           = client->fsaccess->newfileaccess();
 
