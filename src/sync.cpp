@@ -140,8 +140,10 @@ bool Sync::loadFromCache() {
     return false;
 }
 
-void Sync::addToDeleteQueue( LocalNode* toDelete ) {
-    insertq.remove( toDelete );
+void Sync::addToDeleteQueue( LocalNode* toDelete, const bool& isDestructor ) {
+    if( !isDestructor ) {
+        insertq.remove( toDelete );
+    }
     if( toDelete->dbid ) {
         deleteq.push_back(toDelete->dbid);
     }
@@ -418,29 +420,57 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
         // Tries to load local nodes from cache
         if( SYNC_INITIALSCAN == state ) {
             LocalNode* tmpL = NULL;
+            string fname = string( localname ? *localpath : tmppath,
+                                   client->fsaccess->lastpartlocal(localname ? localpath : &tmppath) +1,
+                                   string::npos );
 
             if( parent ) {
-                tmpL = parent->childbyname( localname ? localpath : &tmppath );
+                tmpL = parent->childbyname( &fname );
             } else {
-                tmpL = localroot.childbyname( localname ? localpath : &tmppath );
+                tmpL = localroot.childbyname( &fname );
             }
 
-            if( tmpL && (
-                            FOLDERNODE == tmpL->type
-                            || ( FILENODE == tmpL->type
-                                && fa->size == tmpL->size
-                                && fa->mtime == tmpL->mtime
-                            )
-                        )
-            ) {
+            if( tmpL && ( FOLDERNODE == tmpL->type || FILENODE == tmpL->type ) ) {
+
                 l = tmpL;
-                localbytes += l->size;
 
-                client->syncactivity = true;
+                if( FOLDERNODE == l->type
+                        || ( FILENODE == l->type
+                             && fa->size == l->size
+                             && fa->mtime == l->mtime
+                           )
+                ) {
+                    l->scanseqno = scanseqno;
+                    localbytes  += l->size;
 
-                delete fa;
-                return l;
+                    if( FOLDERNODE == l->type ) {
+                        scan(localname ? localpath : &tmppath, fa);
+                    }
+
+                    delete fa;
+                    return l;
+                } else {
+                    m_off_t dsize = l->size;
+
+                    if (l->genfingerprint(fa))
+                    {
+                        localbytes += l->size - dsize;
+                    }
+
+                    client->app->syncupdate_local_file_change(this, path.c_str());
+
+                    client->stopxfer(l);
+                    l->bumpnagleds();
+                    l->deleted = false;
+
+                    client->syncactivity = true;
+
+                    addToInsertQueue( l );
+                    delete fa;
+                    return l;
+                }
             }
+
         }
 
         if (!isroot)
@@ -449,7 +479,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
             {
                 // mark as present
                 l->setnotseen(0);
-                l->scanseqno = scanseqno;
 
                 if (fa->type == FILENODE)
                 {

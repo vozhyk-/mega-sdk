@@ -935,7 +935,7 @@ void LocalNode::setfsid(handle newfsid)
 LocalNode::~LocalNode()
 {
 
-    sync->addToDeleteQueue( this );
+    sync->addToDeleteQueue( this, true );
     setnotseen(0);
 
     if (newnode)

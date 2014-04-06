@@ -43,7 +43,7 @@ public:
     list<LocalNode*> insertq;
 
     // Adds an entry to the delete queue - removes it from insertq
-    void addToDeleteQueue( LocalNode* toDelete );
+    void addToDeleteQueue( LocalNode* toDelete, const bool& isDestructor = false );
 
     // Adds an entry to the insert queue - removes it from deleteq
     void addToInsertQueue( LocalNode* toInsert );

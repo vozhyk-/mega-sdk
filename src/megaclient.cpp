@@ -3279,6 +3279,8 @@ int MegaClient::readnodes(JSON* j, int notify, putsource_t source, NewNode* nn, 
                         nn[i].localnode->setnode(n);
                         nn[i].localnode->newnode = NULL;
                         nn[i].localnode->treestate(TREESTATE_SYNCED);
+                        // Updates cache with the new node associated
+                        nn[i].localnode->sync->addToInsertQueue( nn[i].localnode );
                     }
                 }
 
@@ -4799,6 +4801,9 @@ bool MegaClient::syncdown(LocalNode* l, string* localpath, bool rubbish)
                 if (!syncdown(ll, localpath, rubbish) && success)
                 {
                     success = false;
+                } else {
+                    // Updates cache entry with the new node
+                    ll->sync->addToInsertQueue( ll );
                 }
 
                 nchildren.erase(rit);
@@ -4938,6 +4943,8 @@ bool MegaClient::syncdown(LocalNode* l, string* localpath, bool rubbish)
                                 if (!syncdown(ll, localpath, rubbish) && success)
                                 {
                                     success = false;
+                                } else {
+                                    ll->sync->addToInsertQueue( ll );
                                 }
                             }
                         }
@@ -5047,6 +5054,7 @@ void MegaClient::syncup(LocalNode* l, dstime* nds)
                         // same fingerprint, if available): no action needed
                         ll->setnode(rit->second);
                         ll->treestate(TREESTATE_SYNCED);
+                        ll->sync->addToInsertQueue( ll );
                         continue;
                     }
                 }
