@@ -93,7 +93,7 @@ public:
     DbTable* statecachetable;
 
     // move file or folder to localdebris
-    bool movetolocaldebris(string* localpath, LocalNode* lnode = NULL );
+    bool movetolocaldebris(string* localpath);
 
     Sync(MegaClient*, string*, const char*, string*, Node*, int = 0);
     ~Sync();
