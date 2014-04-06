@@ -134,7 +134,6 @@ bool Sync::loadFromCache() {
             }
         }
 
-
         return true;
     }
 
@@ -436,12 +435,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
             ) {
                 l = tmpL;
                 localbytes += l->size;
-
-                if( FOLDERNODE == tmpL->type ) {
-                    client->updateputs();
-                    client->app->syncupdate_local_folder_addition(this, path.c_str());
-                    scan(localname ? localpath : &tmppath, fa);
-                }
 
                 client->syncactivity = true;
 
