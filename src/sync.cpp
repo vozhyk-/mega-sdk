@@ -132,6 +132,7 @@ bool Sync::loadFromCache() {
             } else {
                 cur->setnameparent( &localroot, &cur->fullpathcache );
             }
+            cur->setnotseen(1);
         }
 
         return true;
@@ -433,6 +434,7 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
             if( tmpL && ( FOLDERNODE == tmpL->type || FILENODE == tmpL->type ) ) {
 
                 l = tmpL;
+                l->setnotseen(0);
 
                 if( FOLDERNODE == l->type
                         || ( FILENODE == l->type
