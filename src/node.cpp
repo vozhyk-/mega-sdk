@@ -792,7 +792,7 @@ void LocalNode::init(Sync* csync, nodetype_t ctype, LocalNode* cparent, string* 
     syncxfer    = true;
     newnode     = NULL;
     parent_dbid = 0;
-    fullpathcache = *cfullpath;
+    fullpathcache = ( cfullpath ? *cfullpath : "" );
 
     ts = TREESTATE_NONE;
     dts = TREESTATE_NONE;

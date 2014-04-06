@@ -710,7 +710,7 @@ void Sync::procscanq(int q)
 
 }
 
-bool Sync::movetolocaldebris(string* localpath, LocalNode* lnode)
+bool Sync::movetolocaldebris(string* localpath)
 {
     size_t t = localdebris.size();
     char buf[32];
