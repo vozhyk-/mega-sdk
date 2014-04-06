@@ -587,16 +587,9 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                     // unmark possible deletion
                     it->second->setnotseen(0);
 
-                    // Unmark children as not seen
+                    // Immediately scans folder to avoid fake deletion of children
                     if( SYNC_INITIALSCAN == state ) {
                         scan(localname ? localpath : &tmppath, fa);
-//                        for( localnode_map::iterator cit = it->second->children.begin();
-//                             cit != it->second->children.end(); ++cit ) {
-//                            LocalNode* child = cit->second;
-//                            if( child ) {
-//                                child->setnotseen( 0 );
-//                            }
-//                        }
                     }
                 }
                 else
