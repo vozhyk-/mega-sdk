@@ -141,16 +141,20 @@ bool Sync::loadFromCache() {
     return false;
 }
 
-void Sync::addToDeleteQueue( LocalNode* toDelete, const bool& isDestructor ) {
-    if( !isDestructor ) {
-        insertq.remove( toDelete );
+void Sync::addToDeleteQueue( LocalNode* toDelete ) {
+    if( SYNC_CANCELED == state ) {
+        return;
     }
+    insertq.remove( toDelete );
     if( toDelete->dbid ) {
         deleteq.push_back(toDelete->dbid);
     }
 }
 
 void Sync::addToInsertQueue( LocalNode* toInsert ) {
+    if( SYNC_CANCELED == state ) {
+        return;
+    }
     if( toInsert->dbid ) {
         deleteq.remove( toInsert->dbid );
     }
