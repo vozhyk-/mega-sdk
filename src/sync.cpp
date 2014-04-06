@@ -433,7 +433,8 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
 
             if( tmpL && ( FOLDERNODE == tmpL->type || FILENODE == tmpL->type ) ) {
 
-                l = tmpL;
+                l           = tmpL;
+                l->deleted  = false;
                 l->setnotseen(0);
 
                 if( FOLDERNODE == l->type
@@ -463,7 +464,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
 
                     client->stopxfer(l);
                     l->bumpnagleds();
-                    l->deleted = false;
 
                     client->syncactivity = true;
 
@@ -586,6 +586,18 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
 
                     // unmark possible deletion
                     it->second->setnotseen(0);
+
+                    // Unmark children as not seen
+                    if( SYNC_INITIALSCAN == state ) {
+                        scan(localname ? localpath : &tmppath, fa);
+//                        for( localnode_map::iterator cit = it->second->children.begin();
+//                             cit != it->second->children.end(); ++cit ) {
+//                            LocalNode* child = cit->second;
+//                            if( child ) {
+//                                child->setnotseen( 0 );
+//                            }
+//                        }
+                    }
                 }
                 else
                 {
