@@ -189,6 +189,9 @@ struct MEGA_API LocalNode : public File, Cachable
     // parent linkage
     LocalNode* parent;
 
+    // cache full path
+    string fullpathcache;
+
     // stored to rebuild tree after serialization => this must not be a pointer to parent->dbid
     int32_t parent_dbid;
 

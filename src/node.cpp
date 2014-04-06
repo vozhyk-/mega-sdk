@@ -792,6 +792,7 @@ void LocalNode::init(Sync* csync, nodetype_t ctype, LocalNode* cparent, string* 
     syncxfer    = true;
     newnode     = NULL;
     parent_dbid = 0;
+    fullpathcache = *cfullpath;
 
     ts = TREESTATE_NONE;
     dts = TREESTATE_NONE;
@@ -1094,6 +1095,8 @@ bool LocalNode::serialize( string* sr ) {
 
     m_off_t sType = type ? -type : size;
     m_off_t sSize = size;
+    m_off_t sTs   = ts;
+    m_off_t sDts  = dts;
     int32_t pdbid = ( parent ? parent->dbid : 0 );
 
     handle dummynode = 0;
@@ -1111,6 +1114,8 @@ bool LocalNode::serialize( string* sr ) {
     sr->append( (char*)&sType,  sizeof(sType) );
     sr->append( (char*)&sSize,  sizeof(sSize) );     // serializefingerprint does not serializes size
     sr->append( (char*)&fsid,   sizeof(handle) );
+    sr->append( (char*)&sTs,     sizeof(sTs) );
+    sr->append( (char*)&sDts,    sizeof(sDts) );
 
     if( node ) {
         sr->append( (char*)&node->nodehandle, sizeof(handle) );
@@ -1148,7 +1153,9 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     const char* end     = ptr + sData->size();
 
     m_off_t usType,
-            uSize
+            uSize,
+            usTs,
+            usDts
     ;
     int32_t     uPdbid;
     nodetype_t  uType;
@@ -1173,8 +1180,12 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
                     uFullPathLength
     ;
 
+    treestate_t uTs,
+                uDts
+    ;
+
     // +4 => at least 1 byte for fingerprint, name, fullpath and localName
-    if( ptr + ( 2 * sizeof(m_off_t) + sizeof(int32_t) + ( 2 * sizeof(handle) )
+    if( ptr + ( 4 * sizeof(m_off_t) + sizeof(int32_t) + ( 2 * sizeof(handle) )
                 + sizeof(unsigned short) + 3 * sizeof(unsigned int) + 4 ) > end )  {
         return NULL;
     }
@@ -1189,6 +1200,14 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
 
     uSize = MemAccess::get<m_off_t>(ptr);
     ptr += sizeof(uSize);
+
+    usTs = MemAccess::get<m_off_t>(ptr);
+    ptr += sizeof(usTs);
+    uTs = ( usTs < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usTs );
+
+    usDts = MemAccess::get<m_off_t>(ptr);
+    ptr += sizeof(usDts);
+    uDts = ( usDts < TREESTATE_NONE ? TREESTATE_NONE : (treestate_t)usDts );
 
     uFsid = 0;
     memcpy( (char*)&uFsid, ptr, sizeof(handle) );
@@ -1233,24 +1252,18 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
     uFullPath = ptr;
     ptr += uFullPathLength;
 
-    fullPathStr  = string( uFullPath );
-    localNameStr = string( uLocalName );
-    gFingerPrint = string( uSerializedFingerprint );
-    nameStr      = string( uName );
+    fullPathStr     = string( uFullPath );
+    localNameStr    = string( uLocalName );
+    gFingerPrint    = string( uSerializedFingerprint );
+    nameStr         = string( uName );
 
     lnode = new LocalNode();
     lnode->init( sync, uType, parent, NULL, &fullPathStr );
-
-    // Restores node if existing
-    if( uNodeId ) {
-        Node* nnode = sync->client->nodebyhandle( uNodeId );
-        if( NULL != nnode ) {
-            lnode->setnode(nnode);
-        }
-    }
-
     lnode->setfsid( uFsid );
+    lnode->ts           = uTs;
+    lnode->dts          = uDts;
     lnode->parent_dbid  = uPdbid;
+    lnode->size         = uSize;
 
     if( uNameLength > 1 ) {
         lnode->name = nameStr;
@@ -1260,7 +1273,14 @@ LocalNode* LocalNode::unserialize( Sync* sync, string* sData, LocalNode* parent 
         delete lnode;
         return NULL;
     }
-    lnode->size = uSize;
+
+    // Restores node if existing
+    if( uNodeId ) {
+        Node* nnode = sync->client->nodebyhandle( uNodeId );
+        if( NULL != nnode ) {
+            lnode->setnode(nnode);
+        }
+    }
 
     return lnode;
 
