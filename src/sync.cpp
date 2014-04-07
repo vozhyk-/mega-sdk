@@ -435,7 +435,11 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                 tmpL = localroot.childbyname( &fname );
             }
 
-            if( tmpL && ( FOLDERNODE == tmpL->type || FILENODE == tmpL->type ) ) {
+            if( tmpL
+                && ( FOLDERNODE == tmpL->type || FILENODE == tmpL->type )
+                // fsid changes => ignore cache
+                && fa->fsid == tmpL->fsid
+            ) {
 
                 l           = tmpL;
                 l->deleted  = false;
@@ -454,24 +458,6 @@ LocalNode* Sync::checkpath(LocalNode* l, string* localpath, string* localname)
                         scan(localname ? localpath : &tmppath, fa);
                     }
 
-                    delete fa;
-                    return l;
-                } else {
-                    m_off_t dsize = l->size;
-
-                    if (l->genfingerprint(fa))
-                    {
-                        localbytes += l->size - dsize;
-                    }
-
-                    client->app->syncupdate_local_file_change(this, path.c_str());
-
-                    client->stopxfer(l);
-                    l->bumpnagleds();
-
-                    client->syncactivity = true;
-
-                    addToInsertQueue( l );
                     delete fa;
                     return l;
                 }
