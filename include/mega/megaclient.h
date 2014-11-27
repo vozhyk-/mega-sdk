@@ -676,6 +676,9 @@ public:
     void readoutshares(JSON*);
     void readoutshareelement(JSON*);
 
+    void readipc(JSON*);
+    void readopc(JSON*);
+
     void readcr();
     void readsr();
 
