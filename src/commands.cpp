@@ -1285,7 +1285,6 @@ CommandSetShare::CommandSetShare(MegaClient* client, Node* n, User* u, accesslev
     byte auth[SymmCipher::BLOCKSIZE];
     byte key[SymmCipher::KEYLENGTH];
     byte asymmkey[AsymmCipher::MAXKEYLENGTH];
-    string uid;
     int t;
 
     tag = client->restag;
@@ -1301,8 +1300,14 @@ CommandSetShare::CommandSetShare(MegaClient* client, Node* n, User* u, accesslev
     arg("n", (byte*)&sh, MegaClient::NODEHANDLE);
 
     // Only for inviting non-contacts
-    if (personal_representation != NULL && strlen(personal_representation) > 0) arg("e", personal_representation);
-    if (msg != NULL && strlen(msg)) arg("msg", msg);
+    if (personal_representation != NULL && strlen(personal_representation) > 0)
+    {
+        arg("e", personal_representation);
+    }
+    if (msg != NULL && strlen(msg))
+    {
+        arg("msg", msg);
+    }
     
 
     if (a != ACCESS_UNKNOWN)
@@ -1357,8 +1362,8 @@ CommandSetShare::CommandSetShare(MegaClient* client, Node* n, User* u, accesslev
 
 CommandSetShare::~CommandSetShare()
 {
-    if (personal_representation != NULL) delete personal_representation;
-    if (msg != NULL) delete msg;
+    delete personal_representation;
+    delete msg;
 }
 
 // process user element (email/handle pairs)
@@ -1486,7 +1491,12 @@ void CommandSetShare::procresult()
 CommandSetPendingContact::CommandSetPendingContact(MegaClient* client, const char* temail, opcactions_t action, const char* msg, const char* oemail)
 {
     cmd("upc");
-    if (oemail != NULL) arg("e", oemail);
+
+    if (oemail != NULL)
+    {
+        arg("e", oemail);
+    }
+
     arg("u", temail);
     switch (action)     
     {   
@@ -1502,7 +1512,10 @@ CommandSetPendingContact::CommandSetPendingContact(MegaClient* client, const cha
             break;
     }
 
-    if (msg != NULL) arg("msg", msg);
+    if (msg != NULL)
+    {
+        arg("msg", msg);
+    }
 
     tag = client->reqtag;
     this->action = action;
