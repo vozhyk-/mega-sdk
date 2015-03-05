@@ -1300,11 +1300,11 @@ CommandSetShare::CommandSetShare(MegaClient* client, Node* n, User* u, accesslev
     arg("n", (byte*)&sh, MegaClient::NODEHANDLE);
 
     // Only for inviting non-contacts
-    if (personal_representation != NULL && strlen(personal_representation) > 0)
+    if (this->personal_representation && this->personal_representation->size())
     {
         arg("e", personal_representation);
     }
-    if (msg != NULL && strlen(msg))
+    if (this->msg && this->msg->size())
     {
         arg("msg", msg);
     }
@@ -1539,6 +1539,7 @@ void CommandSetPendingContact::procresult()
             case EOO:
                 if (ISUNDEF(p))
                 {
+                    LOG_err << "Error in CommandSetPendingContact. Undefined handle";
                     client->app->setpcr_result(UNDEF, API_EINTERNAL, this->action);                    
                 }
                 else
@@ -1549,6 +1550,7 @@ void CommandSetPendingContact::procresult()
             default:
                 if (!client->json.storeobject())
                 {
+                    LOG_err << "Error in CommandSetPendingContact. Parse error";
                     client->app->setpcr_result(UNDEF, API_EINTERNAL, this->action);
                     return;
                 }
@@ -1587,6 +1589,7 @@ void CommandUpdatePendingContact::procresult()
         return client->app->updatepcr_result((error)client->json.getint(), this->action);
     }
    
+    LOG_err << "Unexpected response for CommandUpdatePendingContact";
     client->app->updatepcr_result(API_EINTERNAL, this->action);
     return;    
 }
