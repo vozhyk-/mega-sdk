@@ -6357,9 +6357,11 @@ void MegaClient::purgenodesusersabortsc()
 
     nodenotify.clear();
     usernotify.clear();
+    pcrnotify.clear();
     users.clear();
     uhindex.clear();
     umindex.clear();
+    pcrindex.clear();
 
     *scsn = 0;
 
