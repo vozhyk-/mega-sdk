@@ -142,9 +142,15 @@
 %newobject mega::MegaError::copy;
 %newobject mega::MegaRequest::copy;
 %newobject mega::MegaTransfer::copy;
+%newobject mega::MegaTransferList::copy;
 %newobject mega::MegaNode::copy;
+%newobject mega::MegaNodeList::copy;
 %newobject mega::MegaShare::copy;
+%newobject mega::MegaShareList::copy;
 %newobject mega::MegaUser::copy;
+%newobject mega::MegaUserList::copy;
+%newobject mega::MegaContactRequest::copy;
+%newobject mega::MegaContactRequestList::copy;
 %newobject mega::MegaRequest::getPublicMegaNode;
 %newobject mega::MegaTransfer::getPublicMegaNode;
 %newobject mega::MegaNode::getBase64Handle;
@@ -177,6 +183,10 @@
 %newobject mega::MegaApi::getCRC;
 %newobject mega::MegaApi::getNodeByCRC;
 %newobject mega::MegaApi::getSessionTransferURL;
+%newobject mega::MegaApi::getIncomingContactRequests;
+%newobject mega::MegaApi::getOutgoingContactRequests;
+%newobject mega::MegaApi::getPendingOutShares;
+%newobject mega::MegaApi::getContactRequestByHandle;
 %newobject mega::MegaRequest::getMegaAccountDetails;
 %newobject mega::MegaRequest::getPricing;
 %newobject mega::MegaAccountDetails::getSubscriptionMethod;
