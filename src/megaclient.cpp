@@ -2476,7 +2476,7 @@ void MegaClient::updatesc()
                 char base64[12];
                 if ((*it)->removed() && (*it)->dbid)
                 {
-                    LOG_verbose << "Removing pcr from database: " << (Base64::btoa((byte*)&((*it)->id),MegaClient::NODEHANDLE,base64) ? base64 : "");
+                    LOG_verbose << "Removing pcr from database: " << (Base64::btoa((byte*)&((*it)->id),MegaClient::PCRHANDLE,base64) ? base64 : "");
                     if (!(complete = sctable->del((*it)->dbid)))
                     {
                         break;
@@ -2484,7 +2484,7 @@ void MegaClient::updatesc()
                 }
                 else if (!(*it)->removed())
                 {
-                    LOG_verbose << "Adding pcr to database: " << (Base64::btoa((byte*)&((*it)->id),MegaClient::NODEHANDLE,base64) ? base64 : "");
+                    LOG_verbose << "Adding pcr to database: " << (Base64::btoa((byte*)&((*it)->id),MegaClient::PCRHANDLE,base64) ? base64 : "");
                     if (!(complete = sctable->put(CACHEDPCR, *it, &key)))
                     {
                         break;
