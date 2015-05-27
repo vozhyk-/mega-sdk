@@ -1182,6 +1182,8 @@ protected:
         virtual void creditcardquerysubscriptions_result(int, error);
         virtual void creditcardcancelsubscriptions_result(error);
 
+        virtual void userfeedbackstore_result(error);
+
         virtual void checkfile_result(handle h, error e);
         virtual void checkfile_result(handle h, error e, byte* filekey, m_off_t size, m_time_t ts, m_time_t tm, string* filename, string* fingerprint, string* fileattrstring);
 

@@ -271,6 +271,9 @@ public:
     // cancel credit card subscriptions
     void creditcardcancelsubscriptions();
 
+    // store user feedback
+    void userfeedbackstore(const char *);
+
     // toggle global debug flag
     bool toggledebug();
 

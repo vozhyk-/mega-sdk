@@ -3044,4 +3044,27 @@ void CommandCreditCardCancelSubscriptions::procresult()
     }
 }
 
+CommandUserFeedbackStore::CommandUserFeedbackStore(MegaClient *client, const char *type, const char *blob, const char *uid)
+{
+    cmd("clog");
+    arg("t", type);
+    arg("d", blob);
+    arg("id", uid);
+
+    tag = client->reqtag;
+}
+
+void CommandUserFeedbackStore::procresult()
+{
+    if (client->json.isnumeric())
+    {
+        client->app->userfeedbackstore_result((error)client->json.getint());
+    }
+    else
+    {
+        client->json.storeobject();
+        client->app->userfeedbackstore_result(API_EINTERNAL);
+    }
+}
+
 } // namespace
